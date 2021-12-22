@@ -22,6 +22,8 @@ This build requires the board manipulation described [here](https://randomnerdtu
 
 Since the `deepSleep()` mechanism resets the µC every time the given duration elapsed, all variables (including `static` ones) also get reset. The `loop()` part of the [`main.cpp`](/ESP01_NowSender/src/main.cpp) does not get called. Everything must be executed within the `setup()` function.
 
+If persistent data is required, the [EEPROM emulation](https://diyprojects.io/esp8266-how-read-write-erase-the-eeprom-calculate-space-needed/) can be used to store (and flush) the data before the `deepSleep()` command is called.
+
 ### 2. DefaultESP01 ###
 
 This build requires no further modification of the ESP-01 board and simply puts the WiFi module to sleep during the idle time. This means all variables work as expected and the `loop()` gets called.
