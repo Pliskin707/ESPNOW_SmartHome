@@ -12,7 +12,7 @@ This build requires the board manipulation described [here](https://randomnerdtu
 
 **Note**
 
-Since the `deepSleep()` mechanism resets the µC every time the given duration elapsed, all variables (including `static` ones) also get reset. The `loop()` part of the [`main.cpp`](/main/ESP01_NowSender/src/main.cpp) does not get called. Everything must be executed within the `setup()` function.
+Since the `deepSleep()` mechanism resets the µC every time the given duration elapsed, all variables (including `static` ones) also get reset. The `loop()` part of the [`main.cpp`](/ESP01_NowSender/src/main.cpp) does not get called. Everything must be executed within the `setup()` function.
 
 ### 2. DefaultESP01 ###
 
