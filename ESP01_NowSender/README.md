@@ -20,6 +20,8 @@ There are two build targets:
 
 This build requires the board manipulation described [here](https://randomnerdtutorials.com/esp8266-deep-sleep-with-arduino-ide/). It is *recommended* to also remove the power LED to further optimize power consumption.
 
+![DeepSleep adjustment](https://arduinodiy.files.wordpress.com/2020/01/esp-01-depsleep.jpg)
+
 **Note**
 
 Since the `deepSleep()` mechanism resets the µC every time the given duration elapsed, all variables (including `static` ones) also get reset. The `loop()` part of the [`main.cpp`](/ESP01_NowSender/src/main.cpp) does not get called. Everything must be executed within the `setup()` function.
