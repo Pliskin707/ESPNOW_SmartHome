@@ -27,3 +27,9 @@ If persistent data is required, the [EEPROM emulation](https://diyprojects.io/es
 ### 2. DefaultESP01 ###
 
 This build requires no further modification of the ESP-01 board and simply puts the WiFi module to sleep during the idle time. This means all variables work as expected and the `loop()` gets called.
+
+# Power consumption #
+
+## ToDo ##
+- [ ] measure power consumption for [DeepSleep](/./ESP01_NowSender#1-deepsleep) build configuration
+- [ ] measure power consumption for [DefaultESP01](/./ESP01_NowSender#2-defaultesp01) build configuration
