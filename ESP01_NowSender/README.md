@@ -2,6 +2,8 @@
 
 This is a low cost sender device with very limited IO which connects to one or more sensors using (preferably) any serial communication protocol. There are no ADC available to use.
 
+![ESP-01 Pinout](https://www.mischianti.org/wp-content/uploads/2019/01/F61TRALJQMOC8BD.LARGE1_.jpg)
+
 ## Adjusting the receiver address ##
 
 Within the [`main.cpp`](/ESP01_NowSender/src/main.cpp), adjust the 
