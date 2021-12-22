@@ -8,7 +8,7 @@ There are two build targets:
 
 ### 1. DeepSleep ###
 
-This build requires the board manipulation described [here](https://randomnerdtutorials.com/esp8266-deep-sleep-with-arduino-ide/). Additionally it is *recommended* to also remove the power LED to further optimize power consumption.
+This build requires the board manipulation described [here](https://randomnerdtutorials.com/esp8266-deep-sleep-with-arduino-ide/). It is *recommended* to also remove the power LED to further optimize power consumption.
 
 **Note**
 
