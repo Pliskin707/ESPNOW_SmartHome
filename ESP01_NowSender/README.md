@@ -2,6 +2,14 @@
 
 This is a low cost sender device with very limited IO which connects to one or more sensors using (preferably) any serial communication protocol. There are no ADC available to use.
 
+## Adjusting the receiver address ##
+
+Within the [`main.cpp`](/ESP01_NowSender/src/main.cpp), adjust the 
+```cpp
+static const uint8_t receiverMac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};    // \brief Receviers MAC address
+```
+to the one of your [NodeMCU_NowReceiver](/../../tree/main/NodeMCU_NowReceiver)
+
 ## Build Targets ##
 
 There are two build targets:
