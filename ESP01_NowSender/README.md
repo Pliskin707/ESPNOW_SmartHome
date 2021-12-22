@@ -32,6 +32,11 @@ If persistent data is required, the [EEPROM emulation](https://diyprojects.io/es
 
 This build requires no further modification of the ESP-01 board and simply puts the WiFi module to sleep during the idle time. This means all variables work as expected and the `loop()` gets called.
 
+# Schematics #
+
+![Schematic](/ESP01_NowSender/fritzing/ESP01_NowSender_schem.png)
+![Breadboard](/ESP01_NowSender/fritzing/ESP01_NowSender_bb.png)
+
 # Power consumption #
 
 ## ToDo ##
