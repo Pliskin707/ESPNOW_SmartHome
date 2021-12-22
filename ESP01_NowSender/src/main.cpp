@@ -6,7 +6,7 @@
 #warning Using normal (unmodified) ESP01 configuration: no deep sleep
 #define SLEEPDURATION_MINUTES(x)   ((x) * 60ul * 1000ul)
 #else
-#warning Using deep sleep mode: all variables get reset every time the controller wakes up! (use EEPROM persistent data is required)
+#warning Using deep sleep mode: all variables get reset every time the controller wakes up! (use EEPROM if persistent data is required)
 #define SLEEPDURATION_MINUTES(x)   ((x) * 60ul * 1000000ul)
 #endif
 
