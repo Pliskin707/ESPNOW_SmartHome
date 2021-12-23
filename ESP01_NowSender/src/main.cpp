@@ -22,12 +22,27 @@ static void transmit (void)
   digitalWrite(LEDPIN, false);
   t_msgData msg = {.type = e_msgType::temperatureHumidity};
   t_tempHumidData payload = {0};  // use a temporary struct so unaligned memory is written
+  uint16_t readTimeout = 3000;
 
   // read values from sensor
   sensors_event_t event;
-  dht.temperature().getEvent(&event);
+  while (readTimeout--)
+  {
+    dht.temperature().getEvent(&event);
+    if (isnan(event.temperature))
+    {
+      delay(1);
+      yield();
+    }
+    else
+      break;
+  }
+
   if (!isnan(event.temperature))
+  {
     payload.temperature = event.temperature;
+    payload.testTempF16 = toFloat16(event.temperature);
+  }
 
   dht.humidity().getEvent(&event);
   if (!isnan(event.relative_humidity))
@@ -57,6 +72,7 @@ void setup() {
   dht.begin();
   
   #ifdef DEEPSLEEP
+  delay(2000);  // maybe the sensor requires some time?
   transmit();
   yield();
   ESP.deepSleep(SLEEPDURATION_MINUTES(1));
