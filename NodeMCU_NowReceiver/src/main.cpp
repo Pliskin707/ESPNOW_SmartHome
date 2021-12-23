@@ -3,6 +3,8 @@
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 
+#include "../../common/common_types.hpp"
+
 Adafruit_SSD1306 oled(128, 64, &Wire);
 
 typedef uint8_t mac_t[6];
@@ -11,16 +13,16 @@ volatile static struct
 {
   bool newData;
   mac_t sender;
-  uint32_t loopCounter;
+  t_msgData msg;
   uint8_t len;
 } rxInfo = {false};
 
 void rxCallback (uint8_t * mac, uint8_t * data, uint8_t len)
 {
+  memset ((void *) &rxInfo, 0, sizeof(rxInfo));
   memcpy((void *) rxInfo.sender, mac, sizeof(mac_t));
-  const int limitedLen = (len > 4) ? 4 : len;
-  rxInfo.loopCounter = 0;
-  memcpy((void *) &rxInfo.loopCounter, data, limitedLen);
+  const int limitedLen = (len > sizeof(rxInfo.msg)) ? sizeof(rxInfo.msg) : len;
+  memcpy((void *) &rxInfo.msg, data, limitedLen);
   rxInfo.len = len;
   rxInfo.newData = true;
 }
@@ -49,6 +51,14 @@ void setup() {
     oled.println("Init failed!");
   }
 
+  float random = -12.45;
+  fixed16_t rand16 = toFixed16(random);
+  float rand32 = fromFixed16(rand16);
+  oled.setCursor(0, 6 * 8);
+
+  oled.println(random);
+  oled.println(rand32);
+
   oled.display();
   delay(1000);
 }
@@ -63,13 +73,29 @@ void loop() {
 
     oled.clearDisplay();
     oled.setCursor(0, 0);
+    oled.println("This device:");
     oled.println(WiFi.macAddress());
-    oled.println();
-    char strMac[30];
+    oled.println("Sender:");
+    char strBuf[100];
     const uint8_t * const senderMacBytes = (const uint8_t * const) rxInfo.sender;
-    snprintf_P(strMac, sizeof(strMac), PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), senderMacBytes[0], senderMacBytes[1], senderMacBytes[2], senderMacBytes[3], senderMacBytes[4], senderMacBytes[5]);
-    oled.println(strMac);
-    oled.println(rxInfo.loopCounter);
+    snprintf_P(strBuf, sizeof(strBuf), PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), senderMacBytes[0], senderMacBytes[1], senderMacBytes[2], senderMacBytes[3], senderMacBytes[4], senderMacBytes[5]);
+    oled.println(strBuf);
+
+    switch (rxInfo.msg.type)
+    {
+      case e_msgType::temperatureHumidity:
+        snprintf_P(strBuf, sizeof(strBuf), PSTR("Temp: %01f C"), rxInfo.msg.data.tempHumid.temperature);
+        oled.println(strBuf);
+        snprintf_P(strBuf, sizeof(strBuf), PSTR("Humid: %01f %%"), rxInfo.msg.data.tempHumid.humidity);
+        oled.println(strBuf);
+        break;
+
+      default:
+        oled.println("<unknown type>");
+        break;
+    }
+
+    oled.setCursor(0, 6 * 8);
     oled.print("RX Length: ");
     oled.println(rxInfo.len);
     oled.print("RX Count: ");
