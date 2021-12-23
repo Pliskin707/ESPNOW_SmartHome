@@ -39,14 +39,11 @@ static void transmit (void)
   }
 
   if (!isnan(event.temperature))
-  {
-    payload.temperature = event.temperature;
-    payload.testTempF16 = toFloat16(event.temperature);
-  }
+    payload.temperature = toFixed16(event.temperature);
 
   dht.humidity().getEvent(&event);
   if (!isnan(event.relative_humidity))
-    payload.humidity = event.relative_humidity;
+    payload.humidity = toFixed16(event.relative_humidity);
 
   // copy with memcpy() so memory alignment is not required
   memcpy(&msg.data.tempHumid, &payload, sizeof(payload));
