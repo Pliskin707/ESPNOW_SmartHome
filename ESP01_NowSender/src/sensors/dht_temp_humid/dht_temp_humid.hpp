@@ -2,7 +2,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 
-#define DHTPIN 5     // Digital pin connected to the DHT sensor (this is GPIO0)
+#define DHTPIN 0     // Digital pin connected to the DHT sensor (this is GPIO0)
 // Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 --
 // Pin 15 can work but DHT must be disconnected during program upload.
 
