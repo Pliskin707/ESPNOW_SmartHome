@@ -1,6 +1,6 @@
 # ESP-01 (512K) Sender #
 
-This is a low cost sender device with very limited IO which connects to one or more sensors using (preferably) any serial communication protocol. There are no ADC available to use.
+This is a low cost sender device with very limited IO which connects to one or more sensors using (preferably) any serial communication protocol. There are no ADCs available to use.
 
 ![ESP-01 Pinout](https://www.mischianti.org/wp-content/uploads/2019/01/F61TRALJQMOC8BD.LARGE1_.jpg)
 
