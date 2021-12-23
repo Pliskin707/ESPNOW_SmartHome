@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include "esp_now_ext/esp_now_ext.hpp"
+#include "sensors/dht_temp_humid/dht_temp_humid.hpp"
+#include "../../common/common_types.hpp"
 
 #ifndef DEEPSLEEP
 #warning Using normal (unmodified) ESP01 configuration: no deep sleep
@@ -18,8 +20,24 @@ static uint32_t loopCounter = 0;
 static void transmit (void)
 {
   digitalWrite(LEDPIN, false);
+  t_msgData msg = {.type = e_msgType::temperatureHumidity};
+  t_tempHumidData payload = {0};  // use a temporary struct so unaligned memory is written
+
+  // read values from sensor
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+  if (!isnan(event.temperature))
+    payload.temperature = event.temperature;
+
+  dht.humidity().getEvent(&event);
+  if (!isnan(event.relative_humidity))
+    payload.humidity = event.relative_humidity;
+
+  // copy with memcpy() so memory alignment is not required
+  memcpy(&msg.data.tempHumid, &payload, sizeof(payload));
+
   // send data
-  EspNowExt.send(receiverMac, &loopCounter, sizeof(loopCounter));
+  EspNowExt.send(receiverMac, &msg, sizeof(msg));
   loopCounter++;
   digitalWrite(LEDPIN, true);
 }
@@ -34,6 +52,9 @@ void setup() {
   // ESP-NOW
   EspNowExt.begin();
   EspNowExt.addPeer(receiverMac);
+
+  // temperature and humidity sensor
+  dht.begin();
   
   #ifdef DEEPSLEEP
   transmit();
