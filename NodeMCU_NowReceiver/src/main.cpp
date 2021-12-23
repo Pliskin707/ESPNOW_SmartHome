@@ -84,9 +84,9 @@ void loop() {
     switch (rxInfo.msg.type)
     {
       case e_msgType::temperatureHumidity:
-        snprintf_P(strBuf, sizeof(strBuf), PSTR("Temp: %01f C"), rxInfo.msg.data.tempHumid.temperature);
+        snprintf_P(strBuf, sizeof(strBuf), PSTR("Temp: %.01f C"), fromFixed16(rxInfo.msg.data.tempHumid.temperature));
         oled.println(strBuf);
-        snprintf_P(strBuf, sizeof(strBuf), PSTR("Humid: %01f %%"), rxInfo.msg.data.tempHumid.humidity);
+        snprintf_P(strBuf, sizeof(strBuf), PSTR("Humid: %.1f %%"), fromFixed16(rxInfo.msg.data.tempHumid.humidity));
         oled.println(strBuf);
         break;
 
