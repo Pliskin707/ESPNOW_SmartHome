@@ -1,13 +1,33 @@
 #include <Arduino.h>
-#include <Adafruit_SSD1306.h>
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 
 #include "../../common/common_types.hpp"
 
-Adafruit_SSD1306 oled(128, 64, &Wire);
+#define TFT_DISPLAY
+#define ENABLE_WLAN
+#define ENABLE_STORAGE
 
-typedef uint8_t mac_t[6];
+#ifndef TFT_DISPLAY
+#include "display/oled/oled_display.hpp"
+oled_display display;
+#else
+#include "display/tft/tft_display.hpp"
+tft_display display;
+#endif
+
+#ifdef ENABLE_WLAN
+#include <WiFiUdp.h>
+#include "../../../../../wifiauth2.h"               // this contains "ssid" and "password" strings
+#define TIMEZONESTR   "CET-1CEST,M3.5.0,M10.5.0/3"  // Berlin (see https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv)
+#define NTPSERVERSTR  "time.google.com"
+#endif
+
+#ifdef ENABLE_STORAGE
+#include "storage/sd_storage.hpp"
+storage store;
+#endif
+
 
 volatile static struct
 {
@@ -29,14 +49,18 @@ void rxCallback (uint8_t * mac, uint8_t * data, uint8_t len)
 
 void setup() {
   // initialize the display
-  oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  oled.clearDisplay();
-  oled.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-  oled.setRotation(2);
-  oled.setTextWrap(false);
-  oled.setCursor(0, 0);
-  oled.println(WiFi.macAddress());
-  oled.display();
+  display.begin();
+  display.setTextColor(-1, 0);  // white text, black background (should work for both oled and tft)
+  display.println(WiFi.macAddress());
+  display.display();
+
+  #ifdef TFT_DISPLAY
+  for (uint8_t bri = 0; bri <= 100; bri++)
+  {
+    display.setBrightness(bri);
+    delay(5);
+  }
+  #endif
 
   // initialize ESP NOW
   WiFi.mode(WIFI_STA);
@@ -44,64 +68,135 @@ void setup() {
   {
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
     esp_now_register_recv_cb(&rxCallback);
-    oled.println("Init ok");
+    display.println("ESP-NOW init ok");
   }
   else
   {
-    oled.println("Init failed!");
+    display.println("ESP-NOW init failed!");
   }
 
-  float random = -12.45;
-  fixed16_t rand16 = toFixed16(random);
-  float rand32 = fromFixed16(rand16);
-  oled.setCursor(0, 6 * 8);
+  #ifdef ENABLE_WLAN
+  // configure time
+  configTime(TIMEZONESTR, NTPSERVERSTR);
 
-  oled.println(random);
-  oled.println(rand32);
+  // connect to the "real" Wifi
+  WiFi.begin(ssid, password);
+  const uint32_t timeout = millis() + 10000;
+  wl_status_t status;
+  do
+  {
+    display.print('.');
+    display.display();
+    status = WiFi.status();
+    if (status == WL_CONNECTED)
+      break;
 
-  oled.display();
+    delay(250);
+  } while (millis() < timeout);
+  display.printf_P("\nWLAN %s\n", (status == WL_CONNECTED) ? "connected":"failed");
+  #endif
+
+  #ifdef ENABLE_STORAGE
+  display.printf_P(PSTR("SD card init %s\n"), store.begin() ? "OK":"Failed");
+  display.printf_P(PSTR("SD file init %s\n"), store.openOrCreate() ? "OK":"Failed");
+  #endif
+
+  display.display();
   delay(1000);
 }
 
 void loop() {
+  const uint32_t millisCount = millis();
   static uint32_t rxCount = 0;
+  static uint32_t nextTimeSync = 0;
+  static struct tm timestamp;
+  static bool clearDisplay = true;
 
   if (rxInfo.newData)
   {
     rxInfo.newData = false;
     rxCount++;
 
-    oled.clearDisplay();
-    oled.setCursor(0, 0);
-    oled.println("This device:");
-    oled.println(WiFi.macAddress());
-    oled.println("Sender:");
+    #ifndef TFT_DISPLAY
+    display.clearDisplay();
+    #endif
+
+    if (clearDisplay)
+    {
+      display.clearDisplay();
+      clearDisplay = false;
+    }
+
     char strBuf[100];
-    const uint8_t * const senderMacBytes = (const uint8_t * const) rxInfo.sender;
-    snprintf_P(strBuf, sizeof(strBuf), PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), senderMacBytes[0], senderMacBytes[1], senderMacBytes[2], senderMacBytes[3], senderMacBytes[4], senderMacBytes[5]);
-    oled.println(strBuf);
+    char sensorType[50];
+    float value1 = NAN, value2 = NAN;
+    String macStr = toString((const uint8_t *) rxInfo.sender);
+    bool storeValues = false;
+
+    display.setCursor(0, 0);
+    display.println("This device:");
+    display.println(WiFi.macAddress());
+    display.println("Sender:");
+    display.println(macStr.c_str());
 
     switch (rxInfo.msg.type)
     {
       case e_msgType::temperatureHumidity:
-        snprintf_P(strBuf, sizeof(strBuf), PSTR("Temp: %.01f C"), fromFixed16(rxInfo.msg.data.tempHumid.temperature));
-        oled.println(strBuf);
-        snprintf_P(strBuf, sizeof(strBuf), PSTR("Humid: %.1f %%"), fromFixed16(rxInfo.msg.data.tempHumid.humidity));
-        oled.println(strBuf);
+        strncpy_P(sensorType, PSTR("TempHumid"), sizeof(sensorType));
+        value1 = fromFixed16(rxInfo.msg.data.tempHumid.temperature);
+        value2 = fromFixed16(rxInfo.msg.data.tempHumid.humidity);
+        storeValues = true;
+
+        snprintf_P(strBuf, sizeof(strBuf), PSTR("Temp: %.01f C"), value1);
+        display.println(strBuf);
+        snprintf_P(strBuf, sizeof(strBuf), PSTR("Humid: %.1f %%"), value2);
+        display.println(strBuf);
         break;
 
       default:
-        oled.println("<unknown type>");
+        display.println("<unknown type>");
         break;
     }
 
-    oled.setCursor(0, 6 * 8);
-    oled.print("RX Length: ");
-    oled.println(rxInfo.len);
-    oled.print("RX Count: ");
-    oled.println(rxCount);
+    display.setCursor(0, 6 * 8);
+    display.print("RX Length: ");
+    display.println(rxInfo.len);
+    display.print("RX Count: ");
+    display.println(rxCount);
 
-    oled.display();
+    #ifdef ENABLE_STORAGE
+    if ((timestamp.tm_year > 70) && storeValues)
+    {
+      store.writeSensorData(&timestamp, macStr.c_str(), sensorType, value1, value2);
+      store.flush();
+    }
+    #else
+    (void) storeValues; // suppress "unused" warning
+    #endif
+
+    // display.display();
+  }
+
+  if (millisCount >= nextTimeSync)
+  {
+    nextTimeSync += 1000;
+
+    time_t now;
+    char buf[20];
+    
+    time(&now);
+    localtime_r(&now, &timestamp);
+
+    if (timestamp.tm_year > 70)
+    {
+      display.setCursor(0, 10 * 8);
+      display.setTextColor(0x07FF, 0); // cyan
+      display.getDateTimeStr(buf, sizeof(buf), &timestamp);
+      display.print(buf);
+      display.setTextColor(-1, 0);
+    }
+
+    display.display();
   }
 
   yield();

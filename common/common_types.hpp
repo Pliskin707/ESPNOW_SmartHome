@@ -10,6 +10,7 @@ typedef enum e_msgType
 } e_msgType;
 
 typedef int16_t fixed16_t;
+typedef uint8_t mac_t[6];
 
 typedef struct t_tempHumidData
 {
@@ -28,14 +29,13 @@ typedef struct __attribute__((packed)) t_msgData
     u_msgDataUnion data;
 } t_msgData;
 
-fixed16_t toFixed16 (const float value)
+fixed16_t toFixed16 (const float value) {return (int16_t) (value * 100.0);}
+float fromFixed16 (const fixed16_t value) {return ((float) value) / 100.0;}
+String toString (const mac_t mac) 
 {
-    return (int16_t) (value * 100.0);
-}
-
-float fromFixed16 (const fixed16_t value)
-{
-    return ((float) value) / 100.0;
+    char buf[18]; // FF:FF:FF:FF:FF:FF
+    sprintf_P(buf, PSTR("%02X:%02X:%02X:%02X:%02X"), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return String(buf);
 }
 
 #endif
