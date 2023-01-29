@@ -14,15 +14,16 @@
 
 #define LEDPIN  LED_BUILTIN
 
-static const uint8_t receiverMac[6] = {0x50, 0x02, 0x91, 0xFC, 0xCB, 0x1C};    // \brief Receviers MAC address
+static const uint8_t receiverMac[6] = {0xAC, 0x0B, 0xFB, 0xCF, 0x22, 0x89};    // \brief Receviers MAC address
 static uint32_t loopCounter = 0;
 
-static void transmit (void)
+static bool transmit (void)
 {
-  digitalWrite(LEDPIN, false);
+  // digitalWrite(LEDPIN, false);
   t_msgData msg = {.type = e_msgType::temperatureHumidity};
   t_tempHumidData payload = {0};  // use a temporary struct so unaligned memory is written
   uint16_t readTimeout = 3000;
+  bool success = true;
 
   // read values from sensor
   sensors_event_t event;
@@ -40,10 +41,14 @@ static void transmit (void)
 
   if (!isnan(event.temperature))
     payload.temperature = toFixed16(event.temperature);
+  else
+    success = false;
 
   dht.humidity().getEvent(&event);
   if (!isnan(event.relative_humidity))
     payload.humidity = toFixed16(event.relative_humidity);
+  else
+    success = false;
 
   // copy with memcpy() so memory alignment is not required
   memcpy(&msg.data.tempHumid, &payload, sizeof(payload));
@@ -51,11 +56,16 @@ static void transmit (void)
   // send data
   EspNowExt.send(receiverMac, &msg, sizeof(msg));
   loopCounter++;
-  digitalWrite(LEDPIN, true);
+  // digitalWrite(LEDPIN, true);
+
+  return success;
 }
 
 void setup() {
-  pinMode(LEDPIN, OUTPUT);
+  // pinMode(LEDPIN, OUTPUT);
+
+  // temperature and humidity sensor
+  dht.begin();
 
   // WiFi
   WiFi.mode(WIFI_STA);
@@ -64,15 +74,12 @@ void setup() {
   // ESP-NOW
   EspNowExt.begin();
   EspNowExt.addPeer(receiverMac);
-
-  // temperature and humidity sensor
-  dht.begin();
   
   #ifdef DEEPSLEEP
   delay(2000);  // maybe the sensor requires some time?
-  transmit();
+  const bool success = transmit();
   yield();
-  ESP.deepSleep(SLEEPDURATION_MINUTES(1));
+  ESP.deepSleep(SLEEPDURATION_MINUTES((success ? 30 : 120)));
   #else
   WiFi.forceSleepBegin();
   #endif

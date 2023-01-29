@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <espnow.h>
+#include <MAX6675.h>
 
 #include "../../common/common_types.hpp"
 
@@ -28,6 +29,31 @@ tft_display display;
 storage store;
 #endif
 
+MAX6675 thermocouple(D4);
+
+/** 
+ * Pin assignment:
+ *
+ * | Node | Display | SD Slot | MAX6675 |
+ * | :--: | :-----: | :-----: | :-----: |
+ * | D0   | LED     |         |         |
+ * | D1   |         | CS      |         |
+ * | D2   | AO      |         |         |
+ * | D3   | Reset   |         |         |
+ * | D4   |         |         | CS      |
+ * | D5   | SCK     | SCK     | SCK     |
+ * | D6   |         | MISO    | SO      |
+ * | D7   | SDA     | MOSI    |         |
+ * | D8   | CS      |         |         |
+ */
+
+const unsigned int NUMBER_OF_MODES = 1;
+
+__attribute__((section(".noinit"))) static struct
+{
+  uint32_t notInitialized;
+  uint8_t displayBrightness;
+} variables;
 
 volatile static struct
 {
@@ -48,6 +74,22 @@ void rxCallback (uint8_t * mac, uint8_t * data, uint8_t len)
 }
 
 void setup() {
+  // initialize the variables
+  if (variables.notInitialized)
+  {
+    variables.notInitialized = false;
+    variables.displayBrightness = 100;
+  }
+  else
+  {
+    switch (variables.displayBrightness)
+    {
+    case 100: variables.displayBrightness = 1;    break;
+    case 1:   variables.displayBrightness = 0;    break;
+    default:  variables.displayBrightness = 100;  break;
+    }
+  }
+
   // initialize the display
   display.begin();
   display.setTextColor(-1, 0);  // white text, black background (should work for both oled and tft)
@@ -55,7 +97,7 @@ void setup() {
   display.display();
 
   #ifdef TFT_DISPLAY
-  for (uint8_t bri = 0; bri <= 100; bri++)
+  for (uint8_t bri = 0; bri <= variables.displayBrightness; bri++)
   {
     display.setBrightness(bri);
     delay(5);
@@ -109,6 +151,7 @@ void loop() {
   const uint32_t millisCount = millis();
   static uint32_t rxCount = 0;
   static uint32_t nextTimeSync = 0;
+  static uint32_t nextThermoRead = 0;
   static struct tm timestamp;
   static bool clearDisplay = true;
 
@@ -175,6 +218,34 @@ void loop() {
     #endif
 
     // display.display();
+  }
+
+  if (millisCount >= nextThermoRead)
+  {
+    nextThermoRead += 300;
+
+    // it seems the data received is shifted by 1 compared to the data sheet, so correct for it here by doing a "float right shift" by one (= divide by 2)
+    const float celcius = thermocouple.readTempC() / 2.0f;  
+
+    display.setCursor(0, 11 * 8);
+    if (isnan(celcius))
+    {
+      display.setTextColor(0xF800, 0);  // red
+      display.println(F("Thermocouple error"));
+    }
+    else if (celcius == MAX6675_THERMOCOUPLE_OPEN)
+    {
+      display.setTextColor(0xF800, 0);  // red
+      display.println(F("No Thermocouple found"));
+    }
+    else
+    {
+      char buf[50];
+      snprintf_P(buf, sizeof(buf), PSTR("Local Temp: %.2fC"), celcius);
+      display.print(buf);
+    }
+
+    display.setTextColor(-1, 0);
   }
 
   if (millisCount >= nextTimeSync)

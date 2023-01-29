@@ -11,7 +11,7 @@ class tft_display : public Adafruit_ST7735, public common_display
         const int8_t _brightnessPin = D0;
 
     public:
-        tft_display() : Adafruit_ST7735(D8, D4, D3) {};
+        tft_display() : Adafruit_ST7735(D8, D2, D3) {};
         void begin (const uint8_t brightness = 0);
         void display (void);
         void clearDisplay (void);
